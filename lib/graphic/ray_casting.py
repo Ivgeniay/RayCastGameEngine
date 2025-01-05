@@ -1,6 +1,6 @@
 import pygame as pg
 from lib.conf.settings import *
-from lib.entitis.map import world_map, default_texture_index
+from lib.entitis.map import world_map, default_texture_index, WORLD_WIDTH, WORLD_HEIGHT
 from lib.entitis.player import Player
 
 
@@ -41,7 +41,7 @@ def ray_cast(player: Player, textures):
     cur_angle = player.angle - HALF_FOV
     xo, yo = player.x, player.y
     xm, ym = mapping(xo, yo)
-    texture_h, texture_v = None, None
+    texture_h, texture_v = 1, 1
     # default_texture_index, default_texture_index
     # NOTE: нахождение переечения с сеткой
     for ray in range(NUM_RAYS):
@@ -50,7 +50,7 @@ def ray_cast(player: Player, textures):
 
         # NOTE: с вертикальной линией сетки вертикали
         x, dx = (xm + TILE, 1) if cos_a >= 0 else (xm, -1)
-        for i in range(0, WIDTH, TILE):
+        for i in range(0, WORLD_WIDTH, TILE):
             depth_v = (x - xo) / cos_a
             yv = yo + depth_v * sin_a
             tile_v = mapping(x + dx, yv)
@@ -61,7 +61,7 @@ def ray_cast(player: Player, textures):
 
         # NOTE: с горизонтальной линией сетки горизонтали
         y, dy = (ym + TILE, 1) if sin_a >= 0 else (ym, -1)
-        for i in range(0, HEIGHT, TILE):
+        for i in range(0, WORLD_HEIGHT, TILE):
             depth_h = (y - yo) / sin_a
             xh = xo + depth_h * cos_a
             tile_h = mapping(xh, y + dy)
@@ -77,7 +77,7 @@ def ray_cast(player: Player, textures):
         depth *= math.cos(player.angle - cur_angle)
         depth = max(depth, 0.00001)
 
-        proj_height = min(int(PROJ_COEFF / depth), 2 * HEIGHT)
+        proj_height = min(int(PROJ_COEFF / depth), PENTA_HEIGHT)
 
         # if texture != None:
         #     wall_column = textures[texture].subsurface(

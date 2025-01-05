@@ -14,8 +14,10 @@ class Drawing:
         self.sc_map = mini_map_screen
         self.font = pg.font.SysFont('Arial', 36, bold=True)
         self.textures = {
-            "1": pg.image.load('resources/img/wall1.png').convert(),
-            "2": pg.image.load('resources/img/wall2.png').convert(),
+            1: pg.image.load('resources/img/wall3.png').convert(),
+            2: pg.image.load('resources/img/wall4.png').convert(),
+            3: pg.image.load('resources/img/wall5.png').convert(),
+            4: pg.image.load('resources/img/wall6.png').convert(),
             "S": pg.image.load('resources/img/sky3.png').convert()
         }
 

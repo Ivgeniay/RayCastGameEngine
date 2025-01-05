@@ -10,7 +10,8 @@ from lib.entitis.sprite_object import *
 
 pg.init()
 sc = pg.display.set_mode((WIDTH, HEIGHT))
-sc_map = pg.Surface(
+pg.mouse.set_visible(False)
+sc_map = pg.Surface(  # MINIMAP_RES)
     (MAP_TILE * map_resolutions[0], MAP_TILE * map_resolutions[1]))
 # sc_map = pg.Surface((WIDTH // MAP_SCALE, HEIGHT // 2))
 sprites = Sprites()
@@ -30,7 +31,7 @@ while True:
     drawing.background(player.angle)
     # drawing.world(player.position, player.angle)
     walls = ray_cast(player, drawing.textures)
-    drawing.world(walls + [obj.object_locate(player, walls)
+    drawing.world(walls + [obj.object_locate(player)
                   for obj in sprites.list_of_objects])
     drawing.fps(clock)
     drawing.mini_map(player)

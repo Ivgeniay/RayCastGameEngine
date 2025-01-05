@@ -1,24 +1,76 @@
 import pygame as pg
 from lib.conf.settings import *
 from lib.entitis.player import Player
+from collections import deque
 
 
 class Sprites:
     def __init__(self):
-        self.sprite_type = {
-            "barrel": pg.image.load('resources/sprites/barrel/0.png').convert_alpha(),
-            "pedestal": pg.image.load('resources/sprites/pedestal/0.png').convert_alpha(),
-            "devil": [pg.image.load(f'resources/sprites/devil/{i}.png').convert_alpha() for i in range(8)]
+        self.sprite_parameters = {
+            "sprite_barrel": {
+                "sprite": pg.image.load('resources/sprites/barrel/base/0.png').convert_alpha(),
+                "viewing_angles": None,
+                "shift": 1.0,
+                "scale": 0.5,
+                "animation": deque(
+                    [pg.image.load(f'resources/sprites/barrel/anim/{i}.png').convert_alpha() for i in range(8)]),
+                "animation_dist": 800,
+                "animation_speed": 10,
+                "blocked": True,
+            },
+            "sprite_pedestal": {
+                "sprite": pg.image.load(f"resources/sprites/pedestal/base/0.png").convert_alpha(),
+                "viewing_angles": None,
+                "shift": 0.6,
+                "scale": 0.4,
+                "animation": None,
+                "animation_dist": None,
+                "animation_speed": None,
+                "blocked": True,
+            },
+            "sprite_pin": {
+                "sprite": pg.image.load(f"resources/sprites/pin/base/0.png").convert_alpha(),
+                "viewing_angles": None,
+                "shift": 0.6,
+                "scale": 0.4,
+                "animation": deque(
+                    [pg.image.load(f"resources/sprites/pin/anim/{i}.png").convert_alpha() for i in range(8)]),
+                "animation_dist": 800,
+                "animation_speed": 10,
+                "blocked": True,
+            },
+            "sprite_devil": {
+                "sprite": [pg.image.load(f'resources/sprites/devil/base/{i}.png').convert_alpha() for i in range(8)],
+                "viewing_angles": True,
+                "shift": -0.2,
+                "scale": 1.1,
+                "animation": deque(
+                    [pg.image.load(f'resources/sprites/devil/anim/{i}.png').convert_alpha() for i in range(8)]),
+                "animation_dist": 150,
+                "animation_speed": 10,
+                "blocked": True,
+            },
+            "sprite_flame": {
+                "sprite": pg.image.load(f'resources/sprites/flame/base/0.png').convert_alpha(),
+                "viewing_angles": None,
+                "shift": 0.7,
+                "scale": 0.6,
+                "animation": deque(
+                    [pg.image.load(f'resources/sprites/flame/anim/{i}.png').convert_alpha() for i in range(8)]),
+                "animation_dist": 800,
+                "animation_speed": 5,
+                "blocked": None,
+            },
         }
+
         self.list_of_objects = [
-            SpriteObject(self.sprite_type["barrel"],
-                         True, (7.1, 2.1), 1.2, 0.8),
-            SpriteObject(self.sprite_type["barrel"],
-                         True, (5.9, 2.1), 1.2, 0.8),
-            SpriteObject(self.sprite_type["pedestal"],
-                         True, (6.5, 2.5), 1.2, 0.8),
-            SpriteObject(self.sprite_type["devil"],
-                         False, (8.5, 2.5), 0.0, 1),
+            SpriteObject(self.sprite_parameters["sprite_barrel"], (7.1, 2.1)),
+            SpriteObject(self.sprite_parameters["sprite_barrel"], (5.9, 2.1)),
+            SpriteObject(self.sprite_parameters["sprite_flame"], (6.5, 2.5)),
+            SpriteObject(self.sprite_parameters["sprite_devil"], (8.5, 2.5)),
+            SpriteObject(self.sprite_parameters["sprite_pin"], (7.5, 2.5)),
+            SpriteObject(
+                self.sprite_parameters["sprite_pedestal"], (5.5, 3.5)),
         ]
 
 
@@ -32,24 +84,25 @@ class SpriteObject:
       :param scale: масштаб спрайта
     """
 
-    def __init__(self, object, is_static: bool, pos: tuple[float, float], shift: float, scale: float):
-        self.object = object
-        self.is_static = is_static
-        self.pos = self.x, self.y = pos[0] * TILE, pos[1] * TILE
-        self.shift = shift
-        self.scale = scale
+    def __init__(self, parameters, pos: tuple[float, float]):
+        self.object = parameters["sprite"]
+        self.viewing_angles = parameters["viewing_angles"]
+        self.shift = parameters["shift"]
+        self.scale = parameters["scale"]
+        self.animation = parameters["animation"]
+        self.animation_dist = parameters["animation_dist"]
+        self.animation_speed = parameters["animation_speed"]
+        self.animation_count = 0
+        self.pos = self.x, self.y = pos[0] * TILE, pos[1] * TILE\
 
-        if not is_static:
+        if self.viewing_angles:
             self.sprite_angles = [frozenset(range(i, i + 45))
                                   for i in range(0, 360, 45)]
             self.sprite_positions = {}
             for angle, pos in zip(self.sprite_angles, self.object):
                 self.sprite_positions[angle] = pos
 
-    def object_locate(self, player: Player, walls: list):
-        fake_walls0 = [walls[0] for i in range(FAKE_RAYS)]
-        fake_walls1 = [walls[-1] for i in range(FAKE_RAYS)]
-        fake_walls = fake_walls0 + walls + fake_walls1
+    def object_locate(self, player: Player):
 
         dx, dy = self.x - player.x, self.y - player.y
         distance_to_sprite = math.sqrt(dx ** 2 + dy ** 2)
@@ -64,13 +117,15 @@ class SpriteObject:
         distance_to_sprite *= math.cos(HALF_FOV - current_ray * DELTA_ANGLE)
 
         fake_ray = current_ray + FAKE_RAYS
-        if 0 <= fake_ray <= NUM_RAYS - 1 + 2 * FAKE_RAYS and distance_to_sprite < fake_walls[fake_ray][0]:
+        if 0 <= fake_ray <= FAKE_RAYS_RANGE and distance_to_sprite > 30:
             # min(int(PROJ_COEFF / distance_to_sprite), HEIGHT)
-            proj_height = int(PROJ_COEFF / distance_to_sprite * self.scale)
+            proj_height = min(
+                int(PROJ_COEFF / distance_to_sprite * self.scale), DOUBLE_HEIGHT)
             half_proj_height = proj_height // 2
             shift = half_proj_height * self.shift
 
-            if not self.is_static:
+            # NOTE: выбор спрайта взависимости от угла
+            if self.viewing_angles:
                 if theta < 0:
                     theta += DOUBLE_PI
                 theta = 360 - int(math.degrees(theta))
@@ -80,11 +135,22 @@ class SpriteObject:
                         self.object = self.sprite_positions[angles]
                         break
 
+            # NOTE: анимация спрайта
+            sprite_object = self.object
+            if (self.animation and self.animation_dist > distance_to_sprite):
+                sprite_object = self.animation[0]
+                if self.animation_count < self.animation_speed:
+                    self.animation_count += 1
+                else:
+                    self.animation.rotate()
+                    self.animation_count = 0
+
+            # NOTE: отрисовка спрайта
             sprite_shift = HALF_HEIGHT - half_proj_height + shift
             sprite_pos = (current_ray * SCALE - half_proj_height, sprite_shift)
             sprite_width = proj_height / self.scale
             sprite = pg.transform.scale(
-                self.object, (int(sprite_width), proj_height))
+                sprite_object, (int(proj_height), proj_height))
             return (distance_to_sprite, sprite, sprite_pos)
         else:
             return (False,)

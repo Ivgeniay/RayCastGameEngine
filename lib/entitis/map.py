@@ -1,29 +1,67 @@
 from lib.conf.settings import *
 
-text_map = [
-    '111111111111',
-    '1..........1',
-    '1..........1',
-    '1..........1',
-    '1.....2....1',
-    '1.....2....1',
-    '1..........1',
-    '1..........1',
-    '1..........1',
-    '1..........1',
-    '1..........1',
-    '111111111111',
+# text_map = [
+#     '111111111111',
+#     '1..........1',
+#     '1..........1',
+#     '1..........1',
+#     '1.....2....1',
+#     '1.....2....1',
+#     '1..........1',
+#     '1..........1',
+#     '1..........1',
+#     '1..........1',
+#     '1..........1',
+#     '111111111111',
+# ]
+
+# map_resolutions = (len(text_map[0]), len(text_map))
+# world_map = {}
+# mini_map = set()
+# for j, row in enumerate(text_map):
+#     for i, char in enumerate(row):
+#         if char != '.':
+#             mini_map.add((i * MAP_TILE, j * MAP_TILE))
+#             if char == '1':
+#                 world_map[(i * TILE, j * TILE)] = '1'
+#             elif char == '2':
+#                 world_map[(i * TILE, j * TILE)] = '2'
+
+# default_texture_index = "1"
+
+_ = False
+matrix_map = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, _, _, _, _, _, _, _, _, _, _, 1],
+    [1, _, _, _, _, _, _, _, _, _, _, 1],
+    [1, _, _, _, _, _, _, _, _, _, _, 1],
+    [1, _, _, _, _, _, _, _, _, _, _, 1],
+    [1, _, _, _, _, _, 2, _, _, _, _, 1],
+    [1, _, _, _, _, 3, _, _, _, _, _, 1],
+    [1, _, 4, 4, 3, _, _, _, _, _, _, 1],
+    [1, _, _, _, _, _, _, _, _, _, _, 1],
+    [1, _, _, _, _, _, _, _, _, _, _, 1],
+    [1, _, _, _, _, _, _, _, _, _, _, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ]
-map_resolutions = (len(text_map[0]), len(text_map))
+
+map_resolutions = (len(matrix_map[0]), len(matrix_map))
+WORLD_WIDTH = map_resolutions[0] * TILE
+WORLD_HEIGHT = map_resolutions[1] * TILE
+
 world_map = {}
 mini_map = set()
-for j, row in enumerate(text_map):
-    for i, char in enumerate(row):
-        if char != '.':
+for j, row in enumerate(matrix_map):
+    for i, texture_index in enumerate(row):
+        if texture_index:
             mini_map.add((i * MAP_TILE, j * MAP_TILE))
-            if char == '1':
-                world_map[(i * TILE, j * TILE)] = '1'
-            elif char == '2':
-                world_map[(i * TILE, j * TILE)] = '2'
+            if texture_index == 1:
+                world_map[(i * TILE, j * TILE)] = 1
+            elif texture_index == 2:
+                world_map[(i * TILE, j * TILE)] = 2
+            elif texture_index == 3:
+                world_map[(i * TILE, j * TILE)] = 3
+            elif texture_index == 4:
+                world_map[(i * TILE, j * TILE)] = 4
 
 default_texture_index = "1"
