@@ -2,47 +2,23 @@ import pygame as pg
 from lib.conf.settings import *
 from lib.entitis.map import world_map, default_texture_index, WORLD_WIDTH, WORLD_HEIGHT
 from lib.entitis.player import Player
-
-
-# def ray_cast(screen: pg.surface, player_pos: tuple[int, int], player_angle: float):
-#     cur_angle = player_angle - HALF_FOV
-#     xo, yo = player_pos
-#     for ray in range(NUM_RAYS):
-#         sin_a = math.sin(cur_angle)
-#         cos_a = math.cos(cur_angle)
-#         # TODO: преобразовать этот алгоритм в класс Ray и добавить методы для вычисления столкновений
-#         for depth in range(MAX_DEPTH):
-#             x = xo + depth * cos_a
-#             y = yo + depth * sin_a
-#             # pg.draw.line(screen, DARKGRAY, player_pos, (x, y), 2)
-#             if (x // TILE * TILE, y // TILE * TILE) in world_map:
-#                 # NOTE: нейтролизация эффекта рыбьего глаза
-#                 # TODO: сделать этот эффект опциональным
-#                 depth *= math.cos(player_angle - cur_angle)
-
-#                 proj_height = PROJ_COEFF / depth
-#                 wall_rect = pg.Rect(ray * SCALE, HALF_HEIGHT - proj_height // 2,
-#                                     SCALE, proj_height)
-#                 c = 255 / (1 + depth * depth * 0.00002)
-#                 color = (c, c // 2, c // 3)
-#                 pg.draw.rect(screen, color, wall_rect)
-#                 break
-#         cur_angle += DELTA_ANGLE
+from numba import njit
 
 
 # NOTE: функция для привязки координат к сетке
+@njit(fastmath=True)
 def mapping(a, b):
     return (a // TILE) * TILE, (b // TILE) * TILE
 
 
-def ray_cast(player: Player, textures):
-    walls = []
+@njit(fastmath=True)
+def ray_cast(player_position, player_angle, world_map):
+    casted_walls = []
 
-    cur_angle = player.angle - HALF_FOV
-    xo, yo = player.x, player.y
+    cur_angle = player_angle - HALF_FOV
+    xo, yo = player_position
     xm, ym = mapping(xo, yo)
-    texture_h, texture_v = 1, 1
-    # default_texture_index, default_texture_index
+    texture_h, texture_v = default_texture_index, default_texture_index
     # NOTE: нахождение переечения с сеткой
     for ray in range(NUM_RAYS):
         sin_a = math.sin(cur_angle)
@@ -74,34 +50,32 @@ def ray_cast(player: Player, textures):
         depth, offset, texture = (depth_v, yv, texture_v) if depth_v < depth_h else (
             depth_h, xh, texture_h)
         offset = int(offset) % TILE
-        depth *= math.cos(player.angle - cur_angle)
+        depth *= math.cos(player_angle - cur_angle)
         depth = max(depth, 0.00001)
 
         proj_height = min(int(PROJ_COEFF / depth), PENTA_HEIGHT)
 
-        # if texture != None:
-        #     wall_column = textures[texture].subsurface(
-        #         offset * TEXTURE_SCALE, 0, TEXTURE_SCALE, TEXTURE_HEIGHT)
-        #     wall_column = pg.transform.scale(wall_column, (SCALE, proj_height))
-        #     screen.blit(wall_column, (ray * SCALE,
-        #                 HALF_HEIGHT - proj_height // 2))
-        # else:
-        #     wall_rect = pg.Rect(ray * SCALE, HALF_HEIGHT - proj_height // 2,
-        #                         SCALE, proj_height)
-        #     c = 255 / (1 + depth * depth * 0.00002)
-        #     color = (c, c // 2, c // 3)
-        #     pg.draw.rect(screen, color, wall_rect)
         if texture is None:
             texture = default_texture_index
+
+        casted_walls.append((depth, offset, proj_height, texture))
+        cur_angle += DELTA_ANGLE
+
+    return casted_walls
+
+
+def ray_casting_wall(player: Player, textures):
+    casted_wall = ray_cast(player.position, player.angle, world_map)
+    walls = []
+
+    for ray, casted in enumerate(casted_wall):
+        depth, offset, proj_height, texture = casted
 
         wall_column = textures[texture].subsurface(
             offset * TEXTURE_SCALE, 0, TEXTURE_SCALE, TEXTURE_HEIGHT)
         wall_column = pg.transform.scale(wall_column, (SCALE, proj_height))
         wall_pos = (ray * SCALE, HALF_HEIGHT - proj_height // 2)
-
         walls.append((depth, wall_column, wall_pos))
-        cur_angle += DELTA_ANGLE
-
     return walls
 
 
