@@ -42,12 +42,12 @@ class Sprites:
                 "collision_radius": 41,
             },
             "sprite_devil": {
-                "sprite": [pg.image.load(f'resources/sprites/devil/base/{i}.png').convert_alpha() for i in range(8)],
+                "sprite": [pg.image.load(f'resources/sprites/npc/devil/base/{i}.png').convert_alpha() for i in range(8)],
                 "viewing_angles": True,
                 "shift": -0.2,
                 "scale": 1.1,
                 "animation": deque(
-                    [pg.image.load(f'resources/sprites/devil/anim/{i}.png').convert_alpha() for i in range(8)]),
+                    [pg.image.load(f'resources/sprites/npc/devil/anim/{i}.png').convert_alpha() for i in range(8)]),
                 "animation_dist": 150,
                 "animation_speed": 10,
                 "blocked": True,
