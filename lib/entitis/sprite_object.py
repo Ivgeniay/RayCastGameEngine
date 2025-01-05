@@ -1,6 +1,5 @@
 import pygame as pg
 from lib.conf.settings import *
-from lib.entitis.player import Player
 from collections import deque
 
 
@@ -17,6 +16,7 @@ class Sprites:
                 "animation_dist": 800,
                 "animation_speed": 10,
                 "blocked": True,
+                "collision_radius": 41,
             },
             "sprite_pedestal": {
                 "sprite": pg.image.load(f"resources/sprites/pedestal/base/0.png").convert_alpha(),
@@ -27,6 +27,7 @@ class Sprites:
                 "animation_dist": None,
                 "animation_speed": None,
                 "blocked": True,
+                "collision_radius": 41,
             },
             "sprite_pin": {
                 "sprite": pg.image.load(f"resources/sprites/pin/base/0.png").convert_alpha(),
@@ -38,6 +39,7 @@ class Sprites:
                 "animation_dist": 800,
                 "animation_speed": 10,
                 "blocked": True,
+                "collision_radius": 41,
             },
             "sprite_devil": {
                 "sprite": [pg.image.load(f'resources/sprites/devil/base/{i}.png').convert_alpha() for i in range(8)],
@@ -49,6 +51,7 @@ class Sprites:
                 "animation_dist": 150,
                 "animation_speed": 10,
                 "blocked": True,
+                "collision_radius": 50,
             },
             "sprite_flame": {
                 "sprite": pg.image.load(f'resources/sprites/flame/base/0.png').convert_alpha(),
@@ -59,7 +62,8 @@ class Sprites:
                     [pg.image.load(f'resources/sprites/flame/anim/{i}.png').convert_alpha() for i in range(8)]),
                 "animation_dist": 800,
                 "animation_speed": 5,
-                "blocked": None,
+                "blocked": False,
+                "collision_radius": 0,
             },
         }
 
@@ -92,8 +96,11 @@ class SpriteObject:
         self.animation = parameters["animation"]
         self.animation_dist = parameters["animation_dist"]
         self.animation_speed = parameters["animation_speed"]
+        self.blocked = parameters["blocked"]
+        self.collision_radius = parameters["collision_radius"]
         self.animation_count = 0
-        self.pos = self.x, self.y = pos[0] * TILE, pos[1] * TILE\
+        self.x, self.y = pos[0] * TILE, pos[1] * TILE
+        self.pos = self.x - self.collision_radius // 2, self.y - self.collision_radius // 2
 
         if self.viewing_angles:
             self.sprite_angles = [frozenset(range(i, i + 45))
@@ -102,7 +109,7 @@ class SpriteObject:
             for angle, pos in zip(self.sprite_angles, self.object):
                 self.sprite_positions[angle] = pos
 
-    def object_locate(self, player: Player):
+    def object_locate(self, player):
 
         dx, dy = self.x - player.x, self.y - player.y
         distance_to_sprite = math.sqrt(dx ** 2 + dy ** 2)

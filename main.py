@@ -3,7 +3,7 @@ from lib.conf.settings import *
 from lib.entitis.player import Player
 import math
 from lib.entitis.map import map_resolutions
-from lib.graphic.ray_casting import ray_cast
+from lib.graphic.ray_casting import ray_casting_wall
 from lib.graphic.drawing import Drawing
 from lib.entitis.sprite_object import *
 
@@ -13,11 +13,11 @@ sc = pg.display.set_mode((WIDTH, HEIGHT))
 pg.mouse.set_visible(False)
 sc_map = pg.Surface(  # MINIMAP_RES)
     (MAP_TILE * map_resolutions[0], MAP_TILE * map_resolutions[1]))
-# sc_map = pg.Surface((WIDTH // MAP_SCALE, HEIGHT // 2))
 sprites = Sprites()
 clock = pg.time.Clock()
-player = Player()
+player = Player(sprites)
 drawing = Drawing(sc, sc_map)
+
 
 while True:
     for event in pg.event.get():
@@ -29,8 +29,7 @@ while True:
     sc.fill(BLACK)
 
     drawing.background(player.angle)
-    # drawing.world(player.position, player.angle)
-    walls = ray_cast(player, drawing.textures)
+    walls = ray_casting_wall(player, drawing.textures)
     drawing.world(walls + [obj.object_locate(player)
                   for obj in sprites.list_of_objects])
     drawing.fps(clock)
