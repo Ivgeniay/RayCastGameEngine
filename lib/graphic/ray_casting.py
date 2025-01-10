@@ -1,7 +1,6 @@
-import pygame as pg
+import pygame
 from lib.conf.settings import *
-from lib.entitis.map import world_map, default_texture_index, WORLD_WIDTH, WORLD_HEIGHT
-from lib.entitis.player import Player
+from lib.entitis.map import world_map, WORLD_WIDTH, WORLD_HEIGHT
 from numba import njit
 
 
@@ -11,72 +10,77 @@ def mapping(a, b):
     return (a // TILE) * TILE, (b // TILE) * TILE
 
 
-@njit(fastmath=True)
-def ray_cast(player_position, player_angle, world_map):
+@njit(fastmath=True, cache=True)
+def ray_casting(player_pos, player_angle, world_map):
     casted_walls = []
-
+    ox, oy = player_pos
+    texture_v, texture_h = 1, 1
+    xm, ym = mapping(ox, oy)
     cur_angle = player_angle - HALF_FOV
-    xo, yo = player_position
-    xm, ym = mapping(xo, yo)
-    texture_h, texture_v = default_texture_index, default_texture_index
-    # NOTE: нахождение переечения с сеткой
     for ray in range(NUM_RAYS):
         sin_a = math.sin(cur_angle)
+        sin_a = sin_a if sin_a else 0.000001
         cos_a = math.cos(cur_angle)
+        cos_a = cos_a if cos_a else 0.000001
 
-        # NOTE: с вертикальной линией сетки вертикали
+        # verticals
         x, dx = (xm + TILE, 1) if cos_a >= 0 else (xm, -1)
         for i in range(0, WORLD_WIDTH, TILE):
-            depth_v = (x - xo) / cos_a
-            yv = yo + depth_v * sin_a
+            depth_v = (x - ox) / cos_a
+            yv = oy + depth_v * sin_a
             tile_v = mapping(x + dx, yv)
             if tile_v in world_map:
                 texture_v = world_map[tile_v]
                 break
             x += dx * TILE
 
-        # NOTE: с горизонтальной линией сетки горизонтали
+        # horizontals
         y, dy = (ym + TILE, 1) if sin_a >= 0 else (ym, -1)
         for i in range(0, WORLD_HEIGHT, TILE):
-            depth_h = (y - yo) / sin_a
-            xh = xo + depth_h * cos_a
+            depth_h = (y - oy) / sin_a
+            xh = ox + depth_h * cos_a
             tile_h = mapping(xh, y + dy)
             if tile_h in world_map:
                 texture_h = world_map[tile_h]
                 break
             y += dy * TILE
 
-        # NOTE: выбор ближайшего столкновения с стеной и отрисовка
+        # projection
         depth, offset, texture = (depth_v, yv, texture_v) if depth_v < depth_h else (
             depth_h, xh, texture_h)
         offset = int(offset) % TILE
         depth *= math.cos(player_angle - cur_angle)
         depth = max(depth, 0.00001)
-
-        proj_height = min(int(PROJ_COEFF / depth), PENTA_HEIGHT)
-
-        if texture is None:
-            texture = default_texture_index
+        proj_height = int(PROJ_COEFF / depth)
 
         casted_walls.append((depth, offset, proj_height, texture))
         cur_angle += DELTA_ANGLE
-
     return casted_walls
 
 
-def ray_casting_wall(player: Player, textures):
-    casted_wall = ray_cast(player.position, player.angle, world_map)
+def ray_casting_walls(player, textures):
+    casted_walls = ray_casting(player.pos, player.angle, world_map)
+    wall_shot = casted_walls[CENTER_RAY][0], casted_walls[CENTER_RAY][2]
     walls = []
+    for ray, casted_values in enumerate(casted_walls):
+        depth, offset, proj_height, texture = casted_values
+        if proj_height > HEIGHT:
+            coeff = proj_height / HEIGHT
+            texture_height = TEXTURE_HEIGHT / coeff
+            wall_column = textures[texture].subsurface(offset * TEXTURE_SCALE,
+                                                       HALF_TEXTURE_HEIGHT - texture_height // 2,
+                                                       TEXTURE_SCALE, texture_height)
+            wall_column = pygame.transform.scale(wall_column, (SCALE, HEIGHT))
+            wall_pos = (ray * SCALE, 0)
+        else:
+            wall_column = textures[texture].subsurface(
+                offset * TEXTURE_SCALE, 0, TEXTURE_SCALE, TEXTURE_HEIGHT)
+            wall_column = pygame.transform.scale(
+                wall_column, (SCALE, proj_height))
+            wall_pos = (ray * SCALE, HALF_HEIGHT - proj_height // 2)
 
-    for ray, casted in enumerate(casted_wall):
-        depth, offset, proj_height, texture = casted
-
-        wall_column = textures[texture].subsurface(
-            offset * TEXTURE_SCALE, 0, TEXTURE_SCALE, TEXTURE_HEIGHT)
-        wall_column = pg.transform.scale(wall_column, (SCALE, proj_height))
-        wall_pos = (ray * SCALE, HALF_HEIGHT - proj_height // 2)
         walls.append((depth, wall_column, wall_pos))
-    return walls
+    return walls, wall_shot
 
 
 # NOTE: алгоритм Брезенхема. На вход принимает координаты игрока, угол направления взгляда и возвращает

@@ -1,40 +1,40 @@
-import pygame as pg
+import pygame
 from lib.conf.settings import *
 from lib.entitis.player import Player
-import math
-from lib.entitis.map import map_resolutions
-from lib.graphic.ray_casting import ray_casting_wall
+from lib.graphic.ray_casting import ray_casting_walls
 from lib.graphic.drawing import Drawing
 from lib.entitis.sprite_object import *
+from lib.entitis.interaction import Interaction
 
+pygame.init()
+sc = pygame.display.set_mode((WIDTH, HEIGHT))
+sc_map = pygame.Surface(MINIMAP_RES)
 
-pg.init()
-sc = pg.display.set_mode((WIDTH, HEIGHT))
-pg.mouse.set_visible(False)
-sc_map = pg.Surface(  # MINIMAP_RES)
-    (MAP_TILE * map_resolutions[0], MAP_TILE * map_resolutions[1]))
 sprites = Sprites()
-clock = pg.time.Clock()
+clock = pygame.time.Clock()
 player = Player(sprites)
-drawing = Drawing(sc, sc_map)
+drawing = Drawing(sc, sc_map, player, clock)
+interaction = Interaction(player, sprites, drawing)
 
+drawing.menu()
+pygame.mouse.set_visible(False)
+interaction.play_music()
 
 while True:
-    for event in pg.event.get():
-        if event.type == pg.QUIT:
-            pg.quit()
-            exit()
 
     player.movement()
-    sc.fill(BLACK)
-
     drawing.background(player.angle)
-    walls = ray_casting_wall(player, drawing.textures)
+    walls, wall_shot = ray_casting_walls(player, drawing.textures)
     drawing.world(walls + [obj.object_locate(player)
                   for obj in sprites.list_of_objects])
     drawing.fps(clock)
     drawing.mini_map(player)
+    drawing.player_weapon([wall_shot, sprites.sprite_shot])
 
-    pg.display.flip()
-    # clock.tick()
-    clock.tick(FPS)
+    interaction.interaction_objects()
+    interaction.npc_action()
+    interaction.clear_world()
+    interaction.check_win()
+
+    pygame.display.flip()
+    clock.tick()
